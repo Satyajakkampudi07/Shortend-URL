@@ -1,16 +1,16 @@
 const express = require('express');
-const dotenv = require('dotenv');
-const path = require("path");
-const urlRoute = require('./routes/url.js');
-const staticRouter = require('./routes/staticRouter.js');
-const URL = require('./models/url.js');
+const cookieParser = require('cookie-parser');
 const connectwithMongoDB = require('./connection.js');
+const dotenv = require('dotenv');
+const urlRoute = require('./routes/url.js');
+const userRoute = require('./routes/user.js')
+const {logger, datelogger} = require('./middleware/logger.js')
 
-dotenv.config();
+dotenv.config()
+const PORT = process.env.PORT ||  5000;
+const MONGO_URI = process.env.MONGODB_URI;
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/shorturl';
 
 
 connectwithMongoDB(MONGO_URI)
@@ -19,29 +19,20 @@ connectwithMongoDB(MONGO_URI)
 
 app.use(express.json());
 app.use(express.urlencoded({extended:false}))
+app.use(cookieParser());
+
+app.use(logger, datelogger);
 app.use('/url', urlRoute);
-app.use('/',staticRouter);
-
-app.get('/:shortId', async (req, res) => {
-    const shortId = req.params.shortId;
-    const entry = await URL.findOneAndUpdate(
-        { shortId: shortId },
-        {
-            $push: {
-                visitHistory: { timestamp: Date.now() }
-            }
-        }
-    );
-    if (!entry) {
-        return res.status(404).send("Short URL not found");
-    }
-    res.redirect(entry.redirectURL);
-});
-
-app.set("view engine","ejs");
-app.set("views", path.resolve("./views"));
+app.use('/', userRoute);
 
 
 app.listen(PORT, () => {
     console.log(`Server Started at PORT http://localhost:${PORT}`);
 });
+
+
+
+
+// app.use('/', staticRouter);
+// app.set("view engine","ejs");
+// app.set("views", path.resolve("./views"));

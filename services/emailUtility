@@ -1,0 +1,22 @@
+const nodemailer = require('nodemailer');
+require('dotenv').config();
+
+async function sendEmail(to, content = "Here is the otp to reset your Password"){
+    const transporter = nodemailer.createTransport({
+        service:"Gmail",
+        auth:{
+            user:process.env.EMAIL,
+            pass:process.env.EMAIL_PASS
+        }
+    });
+
+     await transporter.sendMail({
+        from: process.env.EMAIL,
+        to,
+        subject: "Password Reset OTP",
+        text: content
+    });
+}
+
+
+module.exports = {sendEmail};

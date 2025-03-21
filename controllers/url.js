@@ -1,26 +1,45 @@
 const shortid = require('shortid');
 const URL = require('../models/url.js');
 
-async function generateNewShortURL(req,res) {
-    const body = req.body;
-    if(!body.weburl) return res.status(400).json({msg: "Url required"});
-    const isExist = await URL.findOne({redirectURL: body.weburl}) 
-    const shortId = isExist ? isExist.shortId : shortid()
-    if(!isExist){
-        await URL.create({
-            shortId : shortId,
-            redirectURL: body.weburl,
-            visitHistory: []
-           });
+class Url{
+    async generateNewShortURL(req,res) {
+        const body = req.body;
+        if(!body.url) return res.status(400).json({msg: "Url required"});
+        const isExist = await URL.findOne({redirectURL: body.url}) 
+        const shortId = isExist ? isExist.shortId : shortid()
+        if(!isExist){
+            await URL.create({
+                shortId : shortId,
+                redirectURL: body.url,
+                visitHistory: []
+               });
+        }
+    
+        return res.json({
+            shortUrl: `http://localhost:8080/url/${shortId}`,
+            message: isExist ? "Already exists!" : "New short URL generated",
+            vhistory: (isExist) ? isExist.visitHistory.length : 0,
+            WebUrl: body.url
+        });
+    
     }
-
-    return res.render('link', {
-        shortUrl: `http://localhost:8080/${shortId}`,
-        message: isExist ? "Already exists!" : "New short URL generated",
-        vhistory: (isExist) ? isExist.visitHistory.length : 0,
-        WebUrl: body.weburl
-    });
-
+    
+    async redirectionShortURL(req,res){
+        const shortId = req.params.shortId;
+        const entry = await URL.findOneAndUpdate(
+            { shortId: shortId },
+            {
+                $push: {
+                    visitHistory: { timestamp: Date.now() }
+                }
+            }
+        );
+        if (!entry) {
+            return res.status(404).json({msg:"Short URL not found"});
+        }
+        res.json({msg:"redirect to this url",redirectURL: entry.redirectURL});
+    }
 }
 
-module.exports = generateNewShortURL;
+
+module.exports = new Url();
